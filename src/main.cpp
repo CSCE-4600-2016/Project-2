@@ -14,31 +14,55 @@
 #include <chrono>
 #include <pthread.h> // because you asked nicely...
 #include <unistd.h> //sbrk and brk
-
+#include <cstdlib>  // error-checking in malloc and free
 using namespace std;
 
-static unsigned char our_memory[20 * 1024 * 1024]; //reserve 1 MB for malloc
+// TODO dynamically allocate this array 
+
+   /* Initial memory allocation */
+
+// Globals   
+unsigned char *MemoryBlock;
 static size_t next_index = 0;
+char ast = '*';
+
+//-------------------------------------------------
 
 void *my_malloc(size_t sz)
 {
-    void *mem;
+    // dynamically allocate a char array of size 20*1024*1024
+    // using malloc. This is our memory block.
+    // why compiler continues to enforce void* explicit casts, idk!!
+    MemoryBlock = (unsigned char*)malloc(20*1024*1024);
 
-    if(sizeof our_memory - next_index < sz)
+    // logic: 
+    // a '*' indicates 1 MB. So each process's memory footprint
+    // needs to correspond to a number of asterisks. 
+
+    // if a process requests more than 20MB, then what?
+    void *mem;
+    
+    cout << "\n> Amount of free memory in block: " << (sizeof(MemoryBlock)) << " bytes" << endl;
+
+    
+    if(sizeof MemoryBlock - next_index < sz)
         return NULL;
 
-    mem = &our_memory[next_index];
+    mem = &MemoryBlock[next_index];
     next_index += sz;
     return mem;
 }
 
+//-----------------------------------------------------
+
 void my_free(void *mem)
 {
     if(mem)
-    {
-        sbrk(sizeof((long unsigned int*)mem+1) - sizeof((long unsigned int*)&our_memory[next_index]));
-        // test statement
-        //cout << "\n> Amount of free memory in block: " << (sizeof(our_memory)/sizeof(*our_memory)) << " bytes" << endl;
+    {   // make sure to pass a negative 
+        // value to sbrk to simualte deallocation on the heap 
+        sbrk(sizeof((long unsigned int*)mem+1) - sizeof((long unsigned int*)&MemoryBlock[next_index]));
+        //test statement
+        //cout << "\n> Amount of free memory in block: " << (sizeof(MemoryBlock)/sizeof(*MemoryBlock)) << " bytes" << endl;
     } 
    // else 
    //{
@@ -46,8 +70,7 @@ void my_free(void *mem)
    // }
 }
 
-
-
+//-------------------------------------------------------
 
 void sleepNanoSeconds(int sleepTime)
 {
@@ -138,6 +161,7 @@ int memorySimulatePartTwo(ProcessSet process_set)
     
     cout << "Starting Memory Simulation Part Two" << endl;
     
+        MemoryBlock = (unsigned char *) malloc(20 * 1024 * 1024);
     
     auto totalTimeStart = chrono::high_resolution_clock::now();
     

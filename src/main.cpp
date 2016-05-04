@@ -5,82 +5,55 @@
 * Asad Waheed 
 */
 
-#include "ProcessSet.h"
-#include "Helpers.h"
-//#include "MemoryManager.h"
+
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <queue>
 #include <chrono>
-#include <pthread.h> // because you asked nicely...
-#include <unistd.h> //sbrk and brk
 #include <cstdlib>  // error-checking in malloc and free
+#include "ProcessSet.h"
+
 using namespace std;
 
-// TODO dynamically allocate this array 
-
-   /* Initial memory allocation */
-
 // Globals   
-unsigned char *MemoryBlock;
+char *MemoryBlock;
 static size_t next_index = 0;
-char ast = '*';
+const char ast = '*'; // reresents a filled block of memory
+string memory;
+unsigned int avaliableMemory = 0;
 
 //-------------------------------------------------
 
-void *my_malloc(size_t sz)
+size_t my_malloc(size_t sz)
 {
-    // dynamically allocate a char array of size 20*1024*1024
-    // using malloc. This is our memory block.
-    // why compiler continues to enforce void* explicit casts, idk!!
-    MemoryBlock = (unsigned char*)malloc(20*1024*1024);
+	// to simulate the addition allocating memory we append characters to a string.
+	// each character, *, represents 1 mb of the total memory block
+	// this won't do any error checking, requires user to do the error checking
+	memory.append(sz, ast);
 
-    // logic: 
-    // a '*' indicates 1 MB. So each process's memory footprint
-    // needs to correspond to a number of asterisks. 
-
-    // if a process requests more than 20MB, then what?
-    void *mem;
-    
-    cout << "\n> Amount of free memory in block: " << (sizeof(MemoryBlock)) << " bytes" << endl;
-
-    
-    if(sizeof MemoryBlock - next_index < sz)
-        return NULL;
-
-    mem = &MemoryBlock[next_index];
-    next_index += sz;
-    return mem;
+	return sz;
 }
 
 //-----------------------------------------------------
 
-void my_free(void *mem)
+void my_free(size_t mem)
 {
-    if(mem)
-    {   // make sure to pass a negative 
-        // value to sbrk to simualte deallocation on the heap 
-        sbrk(sizeof((long unsigned int*)mem+1) - sizeof((long unsigned int*)&MemoryBlock[next_index]));
-        //test statement
-        //cout << "\n> Amount of free memory in block: " << (sizeof(MemoryBlock)/sizeof(*MemoryBlock)) << " bytes" << endl;
-    } 
-   // else 
-   //{
-   //     cout << "\nInvalid function parameter!\n";
-   // }
+	// erase this amount of "memory" from the allocated string to simulate freeing memory
+	memory.erase(0, mem);
 }
 
 //-------------------------------------------------------
 
 void sleepNanoSeconds(int sleepTime)
 {
-    auto sleepStart = chrono::high_resolution_clock::now();
-    int sleepedNanoSeconds = 0;
-    do
-    {
-        sleepedNanoSeconds = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - sleepStart).count();
-    }
-    while(sleepedNanoSeconds < sleepTime);
+	auto sleepStart = chrono::high_resolution_clock::now();
+	long sleepedNanoSeconds = 0;
+	do
+	{
+		sleepedNanoSeconds = chrono::duration_cast<chrono::nanoseconds>(chrono::high_resolution_clock::now() - sleepStart).count();
+	}
+	while(sleepedNanoSeconds < sleepTime);
 }
 
 /*  Part one:
@@ -88,54 +61,44 @@ void sleepNanoSeconds(int sleepTime)
  *  and free() to dynamically allocate and de-allocate memory to your processes. Measure the total system time that is
  *  required to simulate the execution of your 64 processes.
  */
-int memorySimulatePartOne(ProcessSet process_set) {
-    
-    cout << "Starting Memory Simulateion Part One" << endl;
-    
-    
-    auto totalTimeStart = chrono::high_resolution_clock::now();
-    
-    void *allocatedMemory = NULL;
-    
-    // Run all 64 processes
-    while(process_set.GetNumberProcesses() > 0) {
-        auto memAllocStart = chrono::high_resolution_clock::now();
-        
-        Process currentProcess = process_set.FirstProcess();
-        
-        cout << "Starting process " << currentProcess.processId << endl;
-        
-        int memoryFootPrintForCurrentProcess = currentProcess.memoryFootprint;
-        
-        // Allocate memory for this process
-        allocatedMemory = malloc(memoryFootPrintForCurrentProcess * 1024); // The memory footprint is in KB
-        
-        if (allocatedMemory == NULL) {
-            cout << "Error allocating memory for process with process ID " << currentProcess.processId << endl ;
-            return -2;
-        }
-        // free the memory for this process
-        free(allocatedMemory);
-        
-        // Delete the process since we are done.
-        process_set.PopProcess();
-        
-//        auto memAllocEnd = chrono::high_resolution_clock::now();
-//        long long memAllocTimeSpent = (chrono::duration_cast<chrono::nanoseconds>(memAllocStart - memAllocEnd).count());
-//        cout << "Current Process execution time was : " << memAllocTimeSpent << " nanoseconds" << endl;
-        
-//        // Assume one cycle time will take the cpu 1 milisecond to run
-//        if (process_set.GetNumberProcesses() > 0) {
-//            // 1000000 = milisecond
-//            int sleepTime = 1000000 * currentProcess.numberCycles;
-//            sleepNanoSeconds(sleepTime);
-//        }
-    }
-    
-    auto totalTimeEnd = chrono::high_resolution_clock::now();
-    cout << "Total program execution time: " << (chrono::duration_cast<chrono::nanoseconds>(totalTimeEnd - totalTimeStart).count()) << " nanoseconds" << endl;
-    
-    return 1;
+chrono::nanoseconds memorySimulatePartOne(ProcessSet process_set) {
+	
+	cout << "Starting Memory Simulateion Part One" << endl;
+	
+	void *allocatedMemory = nullptr;
+	
+	chrono::nanoseconds totalTime = chrono::nanoseconds::zero();
+	// Run all 64 processes
+	while(process_set.GetNumberProcesses() > 0) {
+		auto memAllocStart = chrono::high_resolution_clock::now();
+		
+		Process currentProcess = process_set.FirstProcess();
+		
+		cout << "Starting process " << currentProcess.processId << endl;
+		
+		int memoryFootPrintForCurrentProcess = currentProcess.memoryFootprint;
+		
+		auto totalTimeStart = chrono::high_resolution_clock::now();
+		// Allocate memory for this process
+		allocatedMemory = malloc(memoryFootPrintForCurrentProcess * 1024); // The memory footprint is in KB
+		
+		if (allocatedMemory == nullptr) {
+			cout << "Error allocating memory for process with process ID " << currentProcess.processId << endl ;
+			return totalTime;
+		}
+		// free the memory for this process
+		free(allocatedMemory);
+		auto totalTimeEnd = chrono::high_resolution_clock::now();
+		totalTime += (totalTimeEnd - totalTimeStart);
+
+		// Delete the process since we are done.
+		process_set.PopProcess();
+		
+	}
+	
+	cout << "Total program execution time: " << totalTime.count() << " nanoseconds" << endl;
+	
+	return totalTime;
 }
 
 // Part 2
@@ -144,71 +107,149 @@ int memorySimulatePartOne(ProcessSet process_set) {
 *   my_malloc and my_free to dynamically allocate and
 *   deallocate memory to each process. 
 *
-*   TODO: write the remaining part of the free function
-*   so far there is a trivial check there, but it needs to be
-*   be fixed. For future reference this is my bug at runtime:
--------------------------------------------------------------
-Starting Memory Simulation Part Two
-Starting process 0
-*** Error in `./a.out': free(): invalid pointer: 0x00000000006073e0 ***
---------------------------------------------------------------
-*   NOTE: Ignore all work done inside the MemoryManager class functions
-*   Abandoning OOP in favor of C-style functions
 */
 
-int memorySimulatePartTwo(ProcessSet process_set) 
+chrono::nanoseconds memorySimulatePartTwo(ProcessSet process_set)
 {
-    
-    cout << "Starting Memory Simulation Part Two" << endl;
-    
-        MemoryBlock = (unsigned char *) malloc(20 * 1024 * 1024);
-    
-    auto totalTimeStart = chrono::high_resolution_clock::now();
-    
-    void *allocatedMemory = NULL;
-    
-    // Run all 64 processes
-    while(process_set.GetNumberProcesses() > 0) 
-    {
-        auto memAllocStart = chrono::high_resolution_clock::now();
-        
-        Process currentProcess = process_set.FirstProcess();
-        
-        cout << "Starting process " << currentProcess.processId << endl;
-        
-        int memoryFootPrintForCurrentProcess = currentProcess.memoryFootprint;
-        
-        // Allocate memory for this process
-        allocatedMemory = my_malloc(memoryFootPrintForCurrentProcess * 1024); // The memory footprint is in KB
-        
-        if (allocatedMemory == NULL) 
-        {
-            cout << "Error allocating memory for process with process ID " << currentProcess.processId << endl ;
-            return -2;
-        }
-        // free the memory for this process
-        my_free(allocatedMemory);
-        
-        // Delete the process since we are done.
-        process_set.PopProcess();
+	
+	cout << "Starting Memory Simulation Part Two" << endl;
+	
+	
+	size_t memorySize = 20 * 1024 * 1024;
+	MemoryBlock = static_cast<char *>(malloc(memorySize));
 
-    }
-    
-    auto totalTimeEnd = chrono::high_resolution_clock::now();
-    cout << "Total program execution time: " << (chrono::duration_cast<chrono::nanoseconds>(totalTimeEnd - totalTimeStart).count()) << " nanoseconds" << endl;
-    
-    return 1;
+	memory = MemoryBlock;
+	memory.clear();
+	avaliableMemory = memorySize - memory.length();
+
+	size_t allocatedMemory = 0;
+	chrono::nanoseconds totalTime = chrono::nanoseconds::zero();
+	// Run all 64 processes
+	while(process_set.GetNumberProcesses() > 0) 
+	{
+		Process currentProcess = process_set.FirstProcess();
+		
+		cout << "Starting process " << currentProcess.processId << endl;
+
+		auto memoryFootPrintForCurrentProcess = currentProcess.memoryFootprint;
+		
+		if(memoryFootPrintForCurrentProcess > avaliableMemory)
+		{
+			cout << "Error, Process will use up all memory avaliable." << endl;
+			return totalTime;
+		}
+		// Allocate memory for this process
+		allocatedMemory = my_malloc(memoryFootPrintForCurrentProcess * 1024); // The memory footprint is in Kb
+
+		auto totalTimeStart = chrono::high_resolution_clock::now();
+		// free the memory for this process
+		my_free(allocatedMemory);
+		auto totalTimeEnd = chrono::high_resolution_clock::now();
+		totalTime += (totalTimeEnd - totalTimeStart);
+		// Delete the process since we are done.
+		process_set.PopProcess();
+
+	}
+	
+	// get the memory ready again;
+	free(MemoryBlock);
+	memory.clear();
+	memory.append(20 * 1024 * 1024, '0');
+	return totalTime;
+}
+
+// part 3(a) - Using 10% of the memory of all the processes
+//(b) Using 50% of the memory of all processes
+// for mode pass in either 'a' for part a, or 'b' for part b
+chrono::nanoseconds memorySimulatePartThree(ProcessSet process_set, char mode)
+{
+	vector<Process> currentProcesses;
+	queue<Process> waitingProcesses;
+	vector<Process> setOfProcesses;
+	chrono::nanoseconds totalTime = chrono::nanoseconds::zero();
+
+	float percentage = mode == 'a' ? 0.1 : 0.5;
+	size_t totalMemory = (process_set.GetTotalMemory()*1024) * percentage;
+
+	while(process_set.GetNumberProcesses() > 0)
+	{
+		setOfProcesses.push_back(process_set.FirstProcess());
+		process_set.PopProcess();
+	}
+
+	MemoryBlock = static_cast<char *>(malloc(totalMemory));
+
+	memory = MemoryBlock;
+	memory.clear();
+	avaliableMemory = totalMemory - memory.length();
+
+	while(setOfProcesses.size() > 0)
+	{
+		for (unsigned i = 0; i < setOfProcesses.size(); i++)
+		{
+			auto process = setOfProcesses[i];
+			// find the processes we need to run first
+			if(process.memoryFootprint <= avaliableMemory)
+			{
+				avaliableMemory -= process.memoryFootprint;
+				currentProcesses.push_back(process);
+				setOfProcesses.erase(setOfProcesses.begin(), setOfProcesses.begin() + i + 1);
+			}
+			
+		}
+
+		cout << "Number Of Processes That Can Run: " << currentProcesses.size() << endl;
+		cout << "Number Of Processes That Are Waiting: " << setOfProcesses.size() << endl;
+		// the current process that we need to run
+		
+		for(auto process : currentProcesses)
+		{
+			size_t allocatedMemory;
+			cout << "Starting process " << process.processId << endl;
+
+			auto memoryFootPrintForCurrentProcess = process.memoryFootprint;
+
+			if (memoryFootPrintForCurrentProcess > avaliableMemory)
+			{
+				cout << "Error, Process will use up all memory avaliable." << endl;
+				return totalTime;
+			}
+			auto totalTimeStart = chrono::high_resolution_clock::now();
+			// Allocate memory for this process
+			allocatedMemory = my_malloc(memoryFootPrintForCurrentProcess * 1024); // The memory footprint is in Kb
+			// free the memory for this process
+			my_free(allocatedMemory);
+			auto totalTimeEnd = chrono::high_resolution_clock::now();
+			totalTime += totalTimeEnd - totalTimeStart;
+		}
+		currentProcesses.clear();
+		memory.clear();	
+		avaliableMemory = totalMemory - memory.length();
+	}
+	free(MemoryBlock);
+	memory.clear();
+
+	return totalTime;
 }
 
 int main(int argc, char** argv)
 {
-    // Create a set of processes
-    ProcessSet process_set;
-    process_set.BuildProcessSet(std::cin);
-    
-    // Run Part one
-    memorySimulatePartOne(process_set);
-    // Run Part 2
-    memorySimulatePartTwo(process_set);
+	// Create a set of processes
+	ProcessSet process_set;
+	process_set.BuildProcessSet(cin);
+	
+	// Run Part one
+	auto part1Time = memorySimulatePartOne(process_set);
+	// Run Part 2
+	auto part2Time = memorySimulatePartTwo(process_set);
+
+	// run part 3
+	auto part3Time = memorySimulatePartThree(process_set, 'a');
+	auto part3bTime = memorySimulatePartThree(process_set, 'b');
+
+	cout << "Part 1 Time: " << part1Time.count() << " nanaseconds" << endl;
+	cout << "Part 2 Time: " << part2Time.count() << " nanaseconds" << endl;
+	cout << "Part 3a Time: " << part3Time.count() << " nanaseconds" << endl;
+	cout << "Part 3b Time: " << part3bTime.count() << " nanaseconds" << endl;
 	return 0;
 }

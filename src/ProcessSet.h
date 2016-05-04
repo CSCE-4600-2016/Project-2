@@ -50,6 +50,13 @@ public:
 	/// </summary>
 	/// <returns></returns>
 	Process& FirstProcess();
+	
+
+	/// <summary>
+	/// Gets the total memory.
+	/// </summary>
+	/// <returns></returns>
+	unsigned int GetTotalMemory() const;
 
 private:
 	std::deque<Process> processSet;

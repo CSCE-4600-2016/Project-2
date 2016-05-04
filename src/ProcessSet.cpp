@@ -87,3 +87,18 @@ Process& ProcessSet::FirstProcess()
 	return processSet.front();
 
 }
+
+/// <summary>
+/// Gets the total memory.
+/// </summary>
+/// <returns></returns>
+unsigned ProcessSet::GetTotalMemory() const
+{
+	unsigned memorySum = 0;
+	for(auto process : processSet)
+	{
+		memorySum += process.memoryFootprint;
+	}
+
+	return memorySum;
+}

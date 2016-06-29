@@ -1,0 +1,36 @@
+How I approached this: 
+
+I assumed only C is allowed in this class. Therefore my process "object" is
+really just a typedefed struct with unsigned ints in it.
+
+Some possible (not set in stone) functions and methodology will be: 
+
+double gaussRand()	// adapted from http://c-faq.com/lib/gaussian
+		   	// Using this to generate a normal distribution
+			// Not confident this will work as expected
+
+rand()			// from the stdlib, initializing and giving it
+			// a range so it gives what was asked for in the spec
+
+Some getter functions:
+
+getProcessID()
+getNumOfCycles()
+getMemSize()
+
+Maybe a display function: void display()
+
+for loops: gonna use these to simulate a "dice roll" with the processes. 
+
+More to follow once I get in the zone with this.   
+
+Ok, we need constants in accordance w/ the specs: 
+
+mincycles = 1000
+maxcycles = 11000
+avgcycles = 6000
+minmemfootprint = 1kb
+maxmemfootprint = 100 kb
+avgmemfootprint= 20kb
+
+

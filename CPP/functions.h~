@@ -1,0 +1,16 @@
+// Function prototypes
+
+#ifndef 	FUNCTIONS_H
+#define	FUNCTIONS_H
+
+void CreatePerson();
+void EditPerson();
+void Display Person();
+void SavePerson();
+void LoadPerson();
+
+
+
+
+
+#endif

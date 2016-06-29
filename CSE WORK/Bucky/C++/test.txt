@@ -1,0 +1,7 @@
+I hate to bother you again, but everyone was so helpful last time. 
+I almost have a program coded and working all by myself, but for some reason 
+I'm getting an error after it compiles. The error is "sh: pause: not found".
+
+The program commands the user to enter their city, state and zip code into 
+string data and display it punctuated as the instructions say. This is the 
+code I have written, which mostly works... except it won't take the zip code.

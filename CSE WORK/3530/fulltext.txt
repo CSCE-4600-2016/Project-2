@@ -1,0 +1,714 @@
+Full text of the sample program:
+
+Skip to content
+Sign up Sign in
+This repository  
+Search
+Explore
+Features
+Enterprise
+Pricing
+ Watch 2  Star 1  Fork 0 keithwi/Proxy-Server
+ Code  Issues 0  Pull requests 0  Pulse  Graphs
+Branch: master Find file Copy pathProxy-Server/main.c
+5d39ed7  on Nov 26, 2014
+@keithwi keithwi Merge remote-tracking branch 'origin/Proxy-Server-Development'
+1 contributor
+RawBlameHistory    695 lines (533 sloc)  18.1 KB
+/*
+ * Program: Web Server(handles TCP and Http connection)
+ * Team Member: Ho Ting Jimmy Yeung and Keith Wickramasekara
+ * Data: 10/12/2014
+ * Class: CSCE 3530 Networking Fall 2014
+ */
+
+#include<stdio.h>
+#include<stddef.h>
+#include<stdlib.h>
+#include<unistd.h>
+#include<string.h>
+#include<sys/types.h>
+#include<sys/socket.h>
+#include<arpa/inet.h>
+#include<netinet/in.h>
+#include<netdb.h>
+#include<errno.h>
+#include<ctype.h>
+
+#define BUFFER_SIZE 512
+#define BUFFER_SIZE_CLIENT 262144
+#define SERVER_IP "000.000.000.000" //use this to let the server be connected by specific IP address ( default is set to accept all IP addresses)
+#define PORT_NO 9000 //default port number of proxy server is 9000
+#define PORT_NO_CLIENT 80
+#define MAX_CONNETIONS 1
+#define blacklistFilePath "config/blacklist.txt"
+#define FILEPATH "cached/"
+#define badWordFilePath "config/bad-word-list.txt"
+
+int serverSocket,newServerSocket,clientLen;
+struct sockaddr_in server_address,client_address;
+int bytes;
+char hh[BUFFER_SIZE];
+int count;
+
+FILE *filePointer = NULL;
+FILE *filteredFile = NULL;
+FILE *pt = NULL;
+
+//check if the site is blacklisted, if yes return 1, if no reture -1
+int checkBlacklisted(char *requestedURL) {
+    FILE *fileBlacklist;
+    char * siteURL = NULL;
+    size_t len = 0;
+    fileBlacklist = fopen(blacklistFilePath, "r");
+    
+    if (fileBlacklist == NULL) {
+        fprintf(stderr, "Warning: 'blacklist.txt' not found in 'config' directory. Requests will not be able to check against blacklisted sites. \n");
+    }
+    else {
+        while ((getline(&siteURL, &len, fileBlacklist)) != -1) {
+            strtok(siteURL, "\n"); //Remove any trailing carriage returns
+            if (strcmp(siteURL,requestedURL) == 0) {
+                printf("This site is blacklisted.");
+                fclose(fileBlacklist);
+                return 1;
+            }
+        }
+    }
+    fclose(fileBlacklist);
+    return -1;
+}
+
+// Replace all occurences of the given word
+char *replaceWord(const char *str, const char *old, const char *new)
+{
+    char *ret, *r;
+    const char *p, *q;
+    size_t oldlen = strlen(old);
+    size_t count, retlen, newlen = strlen(new);
+    int samesize = (oldlen == newlen);
+    
+    if (!samesize) {
+        for (count = 0, p = str; (q = strstr(p, old)) != NULL; p = q + oldlen)
+            count++;
+        /* This is undefined if p - str > PTRDIFF_MAX */
+        retlen = p - str + strlen(p) + count * (newlen - oldlen);
+    } else
+        retlen = strlen(str);
+    
+    if ((ret = malloc(retlen + 1)) == NULL)
+        return NULL;
+    
+    r = ret, p = str;
+    while (1) {
+        if (!samesize && !count--)
+            break;
+        if ((q = strstr(p, old)) == NULL)
+            break;
+        /* This is undefined if q - p > PTRDIFF_MAX */
+        ptrdiff_t l = q - p;
+        memcpy(r, p, l);
+        r += l;
+        memcpy(r, new, newlen);
+        r += newlen;
+        p = q + oldlen;
+    }
+    strcpy(r, p);
+    
+    return ret;
+}
+
+char *filterPage(const char *markup) {
+    FILE *fileBadWords;
+    fileBadWords = fopen(badWordFilePath, "r");
+    int i;
+    int badWordCount = 0;
+    int ch, loopCount;
+    char *filteredResult = NULL;
+    char * badWord = NULL;
+    size_t len = 0;
+    
+    //strcpy(filteredResult, markup);
+    filteredResult = markup;
+    
+    // Check for each bad word in the file
+    while ((getline(&badWord, &len, fileBadWords)) != -1) {
+        
+        strtok(badWord, "\n"); //Remove any trailing carriage returns
+        
+        // Check for regular case of the bad word
+        filteredResult = replaceWord(filteredResult, badWord, "*filtered*");
+        
+        // Check for lower case of the bad word
+        for(i = 0; badWord[i]; i++){
+            badWord[i] = tolower(badWord[i]);
+        }
+        
+        filteredResult = replaceWord(filteredResult, badWord, "*filtered*");
+        
+        // Check for upper case of the bad word
+        for(i = 0; badWord[i]; i++){
+            badWord[i] = toupper(badWord[i]);
+        }
+        
+    }
+    
+    return filteredResult;
+    
+}
+
+
+int saveURL(char *requestedURL,char *content) {
+    FILE *URL;
+    FILE *realURL;
+    char temp[BUFFER_SIZE];
+    char temp2[BUFFER_SIZE];
+    char line [1024];
+    sprintf(temp, "cached/%s-",requestedURL);
+    sprintf(temp2, "cached/%s",requestedURL);
+    //printf("\nFile name = %s\n",temp);
+    //printf("\nContent = %s\n",content);
+    // printf("\nthe BUffer size before: %lu\n",strlen(content));
+    char * filteredResult = filterPage(content);
+    URL = fopen(temp, "ab");
+    
+    if (URL == NULL) {
+        fprintf(stderr, "ERROR saving the site \n");
+    }
+    else {
+        fputs(filteredResult,URL);
+        
+    }
+    fclose(URL);
+    
+    int flag = 0;
+    int count1=0;
+    int count2=0;
+    //delete header
+    URL = fopen(temp,"r");
+    realURL = fopen(temp2,"ab");
+    if (URL == NULL || realURL == NULL) {
+        fprintf(stderr, "ERROR deleteing the header \n");
+    }
+    else{
+        while( fgets(line, sizeof(line), URL) != NULL )
+        {
+            count1++;
+            if((strstr(line, "<!")) != NULL) {
+                flag = 1;
+            }
+            if(flag == 1){
+                fprintf(realURL, "%s", line);
+                count2++;
+            }
+        }
+    }
+    
+    remove(temp);
+    printf("\nCount 1 is : %i\n",count1);
+    printf("\nCount 2 is : %i\n",count2);
+    printf("The site %s is cached",requestedURL);
+    fclose(URL);
+    fclose(realURL);
+    
+    return -1;
+}
+
+
+
+
+int sendString(char *message, int socket)
+{
+    int length, bytes_sent;
+    
+    length = strlen(message);
+    
+    bytes_sent = send(socket, message, length, 0);
+    
+    return bytes_sent;
+}
+
+int sendBinary(int *byte, int length)
+{
+    int bytes_sent;
+    
+    bytes_sent = send(newServerSocket, byte, length, 0);
+    
+    return bytes_sent;
+    
+    return 0;
+}
+
+void sendFile(FILE *filePointer, int file_size)
+{
+    int current_char = 0;
+    
+    do{
+        current_char = fgetc(filePointer);
+        sendBinary(&current_char, sizeof(char));
+    }
+    while(current_char != EOF);
+}
+
+int getHttpVersion(char *input, char *output)
+{
+    char *filename = malloc(100);
+    int start = doScan(input, filename, 4);
+    if ( start > 0 )
+    {
+        if ( doScan(input, output, start) )
+        {
+            output[strlen(output)+1] = '\0';
+            
+            if ( strcmp("HTTP/1.1" , output) == 0 )
+                return 1;
+            
+            else if ( strcmp("HTTP/1.0", output) == 0 )
+                
+                return 0;
+            else
+                return -1;
+        }
+        else
+            return -1;
+    }
+    
+    return -1;
+}
+
+int doScan(char *input, char *output, int start)
+{
+    if ( start >= strlen(input) )
+        return -1;
+    
+    int appending_char_count = 0;
+    
+    int i = start;
+    
+    for (; i < strlen(input); i ++ )
+    {
+        if ( *(input + i) != '\t' && *(input + i) != ' ' && *(input + i) != '\n' && *(input + i) != '\r')
+        {
+            *(output + appending_char_count) = *(input + i ) ;
+            
+            appending_char_count += 1;
+        }
+        else
+            break;
+    }
+    *(output + appending_char_count) = '\0';
+    
+    // Find next word start
+    
+    i += 1 ;
+    
+    for (; i < strlen(input); i ++ )
+    {
+        if ( *(input + i ) != '\t' && *(input + i) != ' ' && *(input + i) != '\n' && *(input + i) != '\r')
+            break;
+    }
+    
+    return i;
+}
+
+int sendCachedsite(char *input){
+     FILE *filePointer;
+    char *filename = (char*)malloc(200 * sizeof(char));
+    char *path = (char*)malloc(1000 * sizeof(char));
+    long contentLength = 0;
+    
+    sprintf(path, "cached/%s",input);
+    filePointer = fopen(path, "rb");
+    printf("\nFile = : %s\n",path);
+    
+    if ( filePointer == NULL )
+    {
+        
+        fprintf(stderr, "No file found in the proxy server \n");
+        
+        free(filename);
+        free(path);
+        
+        return -1;
+        
+    }
+    
+    //Send File Content to the client
+    else{
+        printf("send");
+        //send header
+        sendString("HTTP/1.1 200 OK\r\n\r\n", newServerSocket);
+        
+        fseek(filePointer, 0L, SEEK_END);
+        contentLength = ftell(filePointer);
+        fseek(filePointer, 0L, SEEK_SET);
+        //send file
+        sendFile(filePointer, contentLength);
+        
+        free(filename);
+        free(path);
+        
+        fclose(filePointer);
+        
+        return 1;
+    }
+    
+    
+    
+    
+    return -1;
+
+}
+
+int handleHttpGET(char *input)
+{
+    //allocate memory
+    char *filename = (char*)malloc(200 * sizeof(char));
+    char *path = (char*)malloc(1000 * sizeof(char));
+    char httpVersion[20];
+    
+    int contentLength = 0;
+    int fileNameLenght = 0;
+    
+    memset(path, '\0', 1000);
+    memset(filename, '\0', 200);
+    memset(httpVersion, '\0', 20);
+    
+    fileNameLenght = doScan(input, filename, 5);
+    
+    
+    if ( fileNameLenght > 0 )
+    {
+        
+        if ( getHttpVersion(input, httpVersion) != -1 )
+        {
+            FILE *filePointer;
+            
+
+            sprintf(path, "cached/%s",filename);
+            filePointer = fopen(path, "rb");
+            
+            if ( filePointer == NULL )
+            {
+                
+                
+                 
+                 free(filename);
+                 free(path);
+                
+                return -1;
+                
+            }
+            
+            //Send File Content to the client
+            else{
+                //send header
+                sendString("HTTP/1.1 200 OK\r\n\r\n", newServerSocket);
+                //send file
+                sendFile(filePointer, contentLength);
+                
+                free(filename);
+                free(path);
+                
+                fclose(filePointer);
+                
+                return 1;
+            }
+        }
+        
+    }
+    
+    return -1;
+}
+
+
+// receive incoming request
+int receive(int sockett)
+{
+    /*
+     *Tf the proxy server has no record of the requesting page,the proxy server will then act as a client.
+     *Proxy server will first scan the request checking that if the page(s) is blacklisted.
+     *If yes, proxy server we send a 404 message saying that the page(s) is blacklisted.
+     *Proxy server will send a GET rquest to the server and get the page(s).
+     *When the requested page(s) is obtained, proxy server will then save the page(s) to it's own server.
+     *Before proxy server sends the page(s) to the client, it will do a bad word scan to file(s).
+     *Proxy server will send the scanned page(s) to client
+     */
+    
+    //Handle
+    int msgLen = 0;
+    struct sockaddr_in host_addr;
+    int newsockfd1,n,port=0,sockfd1;
+    //char buffer[BUFFER_SIZE_CLIENT],t1[300],t2[500],t3[10];
+    char* temp = NULL;
+    char* temp2 = NULL;
+    char* hostPointer = NULL;
+    char* bufferPointer = NULL;
+    struct hostent* host;
+    
+    char *buffer = (char*)malloc(BUFFER_SIZE_CLIENT * sizeof(char));
+    char *buffer2 = (char*)malloc(BUFFER_SIZE_CLIENT * sizeof(char));
+    char *t1 = (char*)malloc(300 * sizeof(char));
+    char *t2 = (char*)malloc(500 * sizeof(char));
+    char *t3 = (char*)malloc(10 * sizeof(char));
+    
+    memset(t1, '\0', 300);
+    memset(t2, '\0', 500);
+    memset(t3, '\0', 10);
+    count ++;
+    printf("\nincrement: %i\n",count);
+    
+    if ((msgLen = recv(sockett,buffer,BUFFER_SIZE_CLIENT,0)) == -1)
+    {
+        printf("Error handling incoming request\n\n");
+        return -1;
+    }
+    
+    strcpy(buffer2,buffer);
+    
+    
+    //Split the buffer into three strings ( GET /xxxx/xxx HTTP/1.0 )
+    sscanf(buffer,"%s %s %s",t1,t2,t3);
+    
+    //check if the request is GET, the HTTP version is 1.0 or 1.1 and if the path starts from "/"
+    if(((strncmp(t1,"GET",3)==0))&&((strncmp(t3,"HTTP/1.1",8)==0)||(strncmp(t3,"HTTP/1.0",8)==0))&&(strncmp(t2,"/",1)==0))
+    {
+        strcpy(t1,t2);
+        
+        //get host name
+        if(strncmp(t1,"/www",4)==0){
+            
+            
+            temp=strtok(t1,"/"); //get host name
+            port=80; //default http port
+            temp2=strtok(NULL,"^]");//this is path after host name
+            
+            sprintf(t1,"%s",temp);
+            strcpy(hh,t1);
+            printf("\nhost2 = %s\n",hh);
+            host=gethostbyname(t1);
+            
+        }
+        //If host is determined, just get the path of the file
+        else{
+            port=80;
+            temp2 = t1;
+            host=gethostbyname(hh);
+        }
+        
+        //first check if the requested sites are cached in the proxy server
+        if(handleHttpGET(buffer2) == 1){
+            printf("\nThe requested page was cached in the proxy server\n");
+            return 1;
+        }
+        
+        //assign hh(host address) to host pointer
+        hostPointer = hh;
+        
+        //check blacklisted sites
+        if(checkBlacklisted(hostPointer) == 1){
+            sendString("HTTP/1.1 403 Forbidden\r\n\r\n", sockett);
+            
+            //send 404 not found to client
+            sendString("<html><head><title>403 Forbidden!!</title></head><body><h1> The requested site is blacklisted</h1></body></html>", sockett);
+            return 1;
+        }
+        
+        printf("\nTarget Info:");
+        printf("\nhost = %s\npath = %s\nPort = %d\n",hh,temp2,port);
+        
+        //create new client socket
+        sockfd1 = socket (AF_INET, SOCK_STREAM, 0);
+        
+        //Assign address for new socket
+        bzero((char*)&host_addr,sizeof(host_addr));
+        host_addr.sin_port=htons(port);
+        host_addr.sin_family=AF_INET;
+        bcopy((char*)host->h_addr,(char*)&host_addr.sin_addr.s_addr,host->h_length);
+        
+        //connect to host socket
+        newsockfd1=connect(sockfd1,(struct sockaddr*)&host_addr,sizeof(struct sockaddr));
+        sprintf(buffer,"\nConnected to %s  IP - %s\n",hh,inet_ntoa(host_addr.sin_addr));
+        
+        if(newsockfd1<0)
+            perror("Error in connecting to remote server");
+        
+        printf("\n%s\n",buffer);
+        bzero((char*)buffer,sizeof(buffer));
+        
+        if(temp2!=NULL){
+            sprintf(buffer,"GET %s %s\r\nHost: %s\r\nConnection: close\r\n\r\n",temp2,t3,hh);
+        }
+        else{
+            sprintf(buffer,"GET / %s\r\nHost: %s\r\nConnection: close\r\n\r\n",t3,hh);
+        }
+        
+        //printf("message = %s\n",buffer);
+        n = send(sockfd1,buffer,strlen(buffer),0);
+        
+        printf("Sending following request:\n");
+        printf("\n%s\n",buffer);
+        printf("*************************************************************");
+        
+        if(n<0)
+            perror("Error writing to socket");
+        
+        else{
+            int flag = 0;
+            char *bufferBuffer = (char*)malloc(BUFFER_SIZE_CLIENT * sizeof(char));
+            char *b2 = (char*)malloc(BUFFER_SIZE_CLIENT * sizeof(char));
+            
+            do
+            {
+                bzero((char*)buffer,BUFFER_SIZE_CLIENT);
+                n = recv(sockfd1,buffer,BUFFER_SIZE_CLIENT,0);
+                
+                strcat(bufferBuffer,buffer);
+                
+                /*if(!(n<=0)){
+                    send(sockett,buffer,n,0);
+                    
+                }*/
+            }while(n>0);
+            
+            if(flag == 0){
+                
+                saveURL(t1, bufferBuffer);
+                //send the file to user
+               
+                flag = 1;
+                
+            }
+            
+             sendCachedsite(hh);
+        }
+    }
+    else{
+        send(sockett,"400 : BAD REQUEST\nONLY HTTP REQUESTS ALLOWED",18,0);
+    }
+    free(buffer);
+    free(buffer2);
+    free(t1);
+    free(t2);
+    free(t3);
+    close(sockfd1);
+    close(newsockfd1);
+    
+    return 1;
+    
+}
+
+void handle(int socket)
+{
+    
+    /* Receive the http GET request, if the request is not GET, send a error message to client
+     * Process the request and see if the file exists, if not, send a 404 Not Found message to client
+     * Get the requested file and read the file content
+     * Send the file out with http 1.1
+     */
+    
+    if (receive((int)socket) < 0)
+    {
+        perror("ERROR Receiveing");
+        exit(1);
+    }
+}
+
+
+/* Create a socket */
+void createServerSocket()
+{
+    serverSocket = socket (AF_INET, SOCK_STREAM, 0);
+    
+    if(serverSocket < 0)
+    {
+        perror("ERROR Opening Socket");
+        exit(1);
+    }
+}
+
+void bindServerSocket()
+{
+    /* Initialize socket structure */
+    bzero((char *) &server_address, sizeof(server_address));
+    server_address.sin_family = AF_INET;
+    server_address.sin_addr.s_addr = INADDR_ANY;//inet_addr (SERVER_IP);//INADDR_ANY; //inet_addr (SERVER_IP);
+    server_address.sin_port = htons(PORT_NO);
+    
+    /* bind the host address */
+    if(bind (serverSocket, (struct sockaddr *) &server_address, sizeof(server_address)) < 0)
+    {
+        perror("ERROR Binding");
+        exit(1);
+    }
+    
+}
+
+/* Start listening for clients, put the process to sleep and wait for the incoming connection */
+void startListeningToClient(){
+    
+    if ( listen (serverSocket, MAX_CONNETIONS) < 0 )
+    {
+        perror("ERROR Listening On Port");
+        exit(1);
+    }
+    
+}
+
+void getConnection()
+{
+    clientLen = sizeof (client_address);
+    
+    newServerSocket = accept(serverSocket, (struct sockaddr *)&client_address, &clientLen);
+    
+    
+    if ( newServerSocket < 0)
+    {
+        perror("ERROR Accepting Clients");
+        exit(1);
+    }
+    
+    handle(newServerSocket);
+    
+    close(newServerSocket);
+    
+}
+
+
+void start()
+{
+    createServerSocket();
+    
+    bindServerSocket();
+    
+    startListeningToClient();
+    
+    while ( 1 )
+    {
+        getConnection();
+    }
+}
+
+int main (int argc, char *argv[])
+{
+    /*
+     * Make server socket
+     * Set up socket structure
+     * Bind the socket
+     * Waiting incoming connection
+     * Accept incoming connection from client
+     * If connection establish successfully, start communicating
+     * Check the http request from client. In this program, Only GET request is accpeted
+     * Get the path requested from client and the http version
+     * Check if the requested file exists in the server, if yes, create http header and send the file to the client in bytes
+     * Check the file is not found, create http header with 404 Not Found and send a html format message to client saying 404 Not Found
+     * HTTP GET FORMAT:  GET http://www.w3.org/pub/WWW/TheProject.html HTTP/1.1
+     */
+    printf("Welcome to proxy server.");
+    start();
+    
+    
+    return 0;
+}
+Status API Training Shop Blog About Pricing
+© 2016 GitHub, Inc. Terms Privacy Security Contact Help

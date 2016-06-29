@@ -1,0 +1,44 @@
+/*
+	Asad Waheed
+	File: Sort.h
+	Desc: Constants, class and function protoypes here
+*/
+
+
+#ifndef SORT_H
+#define SORT_H
+
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <algorithm>
+#include <ctime>
+#include <cstdlib>
+
+/* GLOBAL CONSTANTS */
+//extern const int INFINITY = 9999;
+
+
+/*	Sort class */
+class Sort
+{
+    public:
+      testfunc1();
+		void displayMenu();
+};
+
+/* Loads and parses the data file object for sorting. 
+	Basically it's gonna rip out the pop. density column out of the txt file
+	Storing that into a datafile array/vector, and make it available for sorting */
+void LoadFile();
+
+/* algorithms to sort the data, timing will be built into these functions */
+void MergeSort();
+void QuickSort();
+void HybridSort();
+
+/* After the datafile array/vector is sorted, this function will save it in another file called
+	pop_density_sorted.txt as per the spec. */
+	
+void SaveData();
+#endif	//	SORT_H

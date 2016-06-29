@@ -1,0 +1,43 @@
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <stdlib.h>
+
+
+int main(int argc, char **argv)
+{
+	// Variables
+	int sock;
+	struct sockaddr_in server;
+	int mysock;
+	char buff[1024];
+	int rval;
+
+	// Create socket
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	if(sock < 0)
+	{
+		perror("Failed to create socket");
+		exit(1);
+	}
+
+
+
+	// Call bind
+
+
+
+
+	// Listen
+
+
+
+
+	// Accept
+
+
+
+	return 0;
+}

@@ -1,0 +1,240 @@
+/* written by Yosvany Blanco and group G
+ * cse 2100 Burke summer 2015
+ * program 4
+ * main.cpp
+ */
+// this file requires BlaY_00_P3_main.h and Bl
+#include "G_00_P4_main.h"
+//#include <sstream>
+int main()
+{
+	List book;
+	std::string input;
+  menu();
+	while(true){
+		bool play = true;
+    
+		while(play){//while input is not correct
+      std::cout << "cmd>";
+			std::cin >> input;
+			std::cout << std::endl;
+			for (int i = 0; i < input.length(); ++i){
+				input[i] = tolower(input[i]);
+			}//convert string to lowercase
+			if (input == "add" || input == "search" || input == "remove" || input == "print" || input == "file" || input == "quit" || input == "ftree")
+			{//if input matches one of the menu items break loop
+				play = false;
+			}
+			else{
+				std::cout << "Invalid input" << std::endl;
+			}//input was not correct
+		}
+	
+		if (input == "add"){
+			std::string input2; // for cmds like add spouse
+			std::cin >> input2;
+			if(input2 == "spouse"){
+				std::string lastname, firstname;
+				unsigned int id; // id of person that spouse is being added to
+				std::cin.ignore(256, 'D'); //because for some reason the input is ID# instead of just the number.. that's dumb why add unneeded complications?
+				std::cin >> id;// read in the actual 3 digit number part
+				std::cin >> firstname >> lastname; // read the name
+				for (int i = 0; i < lastname.length(); ++i){
+					lastname[i] = tolower(lastname[i]);
+				}//convert string to lowercase
+				for (int i = 0; i < firstname.length(); ++i){
+					firstname[i] = tolower(firstname[i]);
+				}//convert string to lowercase
+				book.addspouse(id, lastname, firstname);
+
+			}
+			else if(input2 == "city"){
+				std::string city;
+				unsigned int id;
+				std::cin.ignore(256,'D');
+				std::cin >> id;
+				std::cin >> city;
+				book.addcity(id, city);
+			}
+			else if(input2 == "address1"){
+				std::string address;
+				unsigned int id;
+				std::cin.ignore(256,'D');
+				std::cin >> id;
+				std::getline(std::cin, address);
+				book.addaddress(id, address);
+
+			}
+			else if(input2 == "child"){
+				std::string lastname, firstname;
+				unsigned int id; // id of person that spouse is being added to
+				std::cin.ignore(256, 'D'); //because for some reason the input is ID# instead of just the number
+				std::cin >> id;// read in the actual 3 digit number part
+				std::cin >> firstname >> lastname; // read the name
+				for (int i = 0; i < lastname.length(); ++i){
+					lastname[i] = tolower(lastname[i]);
+				}//convert string to lowercase
+				for (int i = 0; i < firstname.length(); ++i){
+					firstname[i] = tolower(firstname[i]);
+				}//convert string to lowercase
+				book.addchild(id, lastname, firstname);
+			}
+			else if(input2 == "state"){
+				std::string state;
+				unsigned int id;
+				std::cin.ignore(256,'D');
+				std::cin >> id;
+				std::cin >> state;
+				book.addstate(id, state);
+			}
+			else if(input2 == "zip"){
+				unsigned int id, zip;
+				std::cin.ignore(256,'D');
+				std::cin >> id;
+				std::cin >> zip;
+				book.addzip(id, zip);
+			}
+			else if(input2 == "date_birth"){
+				std::string birth;
+				unsigned int id;
+				std::cin.ignore(256,'D');
+				std::cin >> id;
+				std::getline(std::cin, birth);
+				book.addbirth(id, birth);
+			}
+			else if(input2 == "date_wedding"){
+				std::string wedding;
+				unsigned int id;
+				std::cin.ignore(256,'D');
+				std::cin >> id;
+				std::getline(std::cin, wedding);
+				book.addwedding(id, wedding);
+			}
+			else if(input2 == "date_death"){
+				std::string death;
+				unsigned int id;
+				std::cin.ignore(256,'D');
+				std::cin >> id;
+				std::getline(std::cin, death);
+				book.adddeath(id, death);
+			}
+			else if(input2 == "name"){
+				std::string lastname;
+				std::string firstname;
+				//std::cout << "input name to be added: "; he doesn't want a second prompt
+				while (true){
+					std::cin >> firstname >> lastname;
+					for (int i = 0; i < lastname.length(); ++i){
+						lastname[i] = tolower(lastname[i]);
+					}//convert string to lowercase
+					for (int i = 0; i < firstname.length(); ++i){
+						firstname[i] = tolower(firstname[i]);
+					}//convert string to lowercase
+					if (checkname(lastname)){
+						//checkname returned 1 continue
+						break;
+					}
+					if (checkname(firstname)){
+						//checkname returned 1 continue
+						break;
+					}
+					else{
+						std::cout << "The name must not contain invalid characters" << std::endl;
+						//invalid name get new name
+					}
+				}
+				book.addname(lastname, firstname);
+				//book.setsize(); //don't really need this
+				//std::cout << book.getsize() << std::endl;
+			}
+		}
+
+		else if (input == "search"){
+			std::string lastname, firstname;
+			//std::cout << "input name to be searched for lastname, firstname: ";
+			while (true){
+				std::cin >> firstname >> lastname;
+				for (int i = 0; i < lastname.length(); ++i){
+					lastname[i] = tolower(lastname[i]);
+				}//convert string to lowercase
+				for (int i = 0; i < firstname.length(); ++i){
+					firstname[i] = tolower(firstname[i]);
+				}//convert string to lowercase
+				if (checkname(lastname) && checkname(firstname)){
+					//checkname returned 1 continue
+					break;
+				}
+				else{
+					std::cout << "The name must not contain invalid characters" << std::endl;
+					//invalid name get new name
+				}
+			}
+			unsigned int tempid;
+			if( tempid = book.searchname(lastname, firstname) ){
+				std::cout << "FOUND: " << lastname << ", " << firstname << ' ' << "ID:"<< std::setw(3) << tempid <<std::endl;
+			}
+			else{
+				std::cout << "NOT FOUND: " << lastname << ", " << firstname << std::endl;
+			}
+		}
+
+		else if (input == "remove"){
+			std::string firstname, lastname;
+			//std::cout << "input name to be removed: ";
+			while (true){
+				std::cin >> firstname >> lastname;
+				for (int i = 0; i < firstname.length(); ++i){
+					firstname[i] = tolower(firstname[i]);
+				}//convert string to lowercase
+				for (int i = 0; i < lastname.length(); ++i){
+					lastname[i] = tolower(lastname[i]);
+				}//convert string to lowercase
+				if (checkname(firstname)){
+					//checkname returned 1 continue
+					break;
+				}
+				else{
+					std::cout << "The name must not contain invalid characters" << std::endl;
+					//invalid name get new name
+				}
+			}
+			book.removename(firstname,lastname);
+			//book.setsize();//think this function might actually be useless remove if we never end up using this
+			//std::cout << book.getsize() << std::endl;
+
+		}
+
+		else if (input == "print"){
+			std::string input2;
+			std::cin >> input2;
+			if(input2 == "all"){
+				book.print();
+			}
+			else{
+				book.printinfo(input2);
+			}
+		}
+
+		else if (input == "file"){
+			fileread(book);
+		}
+
+		else if (input == "quit"){
+			return 0;
+			//end program;
+		}
+   
+    else if (input == "ftree"){
+      Tree mytree;
+			unsigned int id;
+			std::cin.ignore(256,'D');
+			std::cin >> id;
+      //mytree.fillvect(book.nodesearch(1));
+     // mytree.treeprint();
+      mytree.treeprinthelp(book.nodesearch(id));
+      //mytree.treeprint(book.nodesearch(1),0, 60);
+    }
+	}
+	
+return 0;
+}

@@ -1,0 +1,54 @@
+
+/*
+    Asad Waheed
+    File: Sort.cpp
+    Desc: Implementing all the header file prototypes
+*/
+
+#include "Sort.h"
+
+using namespace std;
+
+int Sort::testfunc1()
+{
+return 1;
+}
+
+void Sort::displayMenu()
+{
+	cout << "======================================================" << endl;
+	cout << "\n\tPROGRAM 2: CENSUS DATA PROCESSOR\n";
+	cout << "\n======================================================\n\n" << endl;
+	cout << "\n\n Choose one of the following options:\n";
+	cout << "\n Press 'a' to run MergeSort";
+	cout << "\n Press 'b' to run QuickSort";
+	cout << "\nPress 'c' to run QuickSort+InsertionSort Hybrid";
+	cout << "\nPress 'q' to QUIT\n\n\n";
+
+	char choice[10];
+
+	while(choice[0] != 'q')
+	{
+		
+		cout << ">	";
+		cin >> choice;
+
+		cout << "\n\n";
+		
+
+		switch(choice[0])
+		{
+			case 'a': // LoadFile(); MergeSort();
+				break;
+			case'b': // LoadFile(); QuickSort();
+				break;
+			case'c': // LoadFile(); HybridSort();
+				break;
+			case 'q': cout << "Bye.\n\n";
+				break;	
+			default: cout << "\nINVALID INPUT TRY AGAIN\n";				
+		}
+	
+	}
+
+}

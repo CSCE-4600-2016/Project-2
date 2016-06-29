@@ -1,0 +1,17 @@
+echo 'Pick a fast car: mustang, camaro, maserati, or chevy. Pick one.'
+read -${BASH_VERSION+e}r car
+
+case $car in
+    mustang)
+        echo 'you picked a mustang thanks.'
+        ;;
+    camaro)
+        echo 'too fast.'
+        ;;
+    maserati|chevy)
+        echo $'HIGH ROLLER'
+        exit 1
+        ;;
+    *)
+        echo "BYE"
+esac

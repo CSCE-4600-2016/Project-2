@@ -1,0 +1,78 @@
+#include <vector>
+#include <algorithm>
+
+// code is sourced from robert sedgewick's algorithm's in C++, 3rd ed., 2002
+
+class Edge
+{
+  public:
+	int v, w;
+	double wt;
+
+	// Recursive call
+	Edge(int v = -1, int w = -1, double wt = 0.0) :
+	v(v), w(w), wt(wt) { }
+
+};
+
+typedef std::shared_ptr <Edge> EdgePtr;
+
+struct EdgeSort
+{
+	bool operator() ( const EdgePtr& ep1, const EdgePtr& ep2 )
+	{
+	   return ep1->wt < ep->wt;
+	}
+};
+
+template <class Edge>
+
+class DenseGRAPH
+{
+private:
+    int Vcnt, Ecnt;
+    bool digraph;
+    std::vector <std::vector<EdgePtr>> adj;
+
+
+public:
+    DenseGRAPH(int V, bool digraph = false) :
+    adj(V),
+    Vcnt(V),
+    Ecnt(0),
+    digraph(digraph)
+    {
+	for ( int i = 0; i < V; i++ )	adj[i].resize(V);
+    }
+
+    int V() const { return Vcnt; }
+    int E() const { return Ecnt; }
+
+    bool directed() const { return digraph; }
+
+    void insert( EdgePtr e )
+    {
+	int v = e->v;
+	int w = e->w;
+
+	if(adj[v][w] == 0) Ecnt++;
+	adj[v][w] = e;
+	if (!digraph) adj[w][v] = e;
+    }
+
+    void remove( EdgePtr e )
+    {
+	int v = e->v;
+	int w = e->w;
+
+	if(adj[v][w] != 0)
+	{
+	   Ecnt--;
+	}
+	
+	
+	if (!digraph) adj[w][v] = 0;
+    }
+
+}
+ adj[w][v] = 0;

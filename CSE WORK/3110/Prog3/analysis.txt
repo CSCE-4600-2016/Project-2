@@ -1,0 +1,75 @@
+/***************	
+Name: ASAD WAHEED	
+Course: CSCE3110
+Assignment:	PROGRAM3
+Due	Date:	3-26-2016
+****************/
+
+References/Program Sources: 
+
+Heavily refactored a 2100 binary tree. 
+Paul's Programming Tutorials on Youtube: https://youtu.be/ROtgyI64kGw?list=PLTxllHdfUq4d-DE16EDkpeb8Z68DU7Z_Q 
+
+Part A: Problem Breakdown
+
+The first objective is to replace the largest node, X in T_L. 
+What is this means? This means that there is some root node, T
+and T_L is the left subtree of T. 
+
+To get some basic implementation definitions out of the way now. 
+
+Node: A 4-tuple struct containing: 
+1 - Value
+2 - Pointer to Parent Node, T
+3 - Pointer to Left Child, T_L
+4 - Pointer to Right Child, T_R
+
+A ROOT node is a node with the following constraints: 
+1 - Value
+2 - Pointer to Parent Node = NULL
+3 - Pointer to Left Child = T_L
+4 - Pointer to Right Child = T_R
+
+A node, T_L is a node with the following constraints: 
+1 - Value
+2 - Pointer to Parent Node = ROOT
+3 - Pointer to Left Child = CHILD1
+4 - Pointer to Right Child = CHILD2 = X (the largest node in T_L)
+
+
+A node, T_R is a node with the following constraints: 
+1 - Value
+2 - Pointer to Parent Node = ROOT
+3 - Pointer to Left Child = CHILD1
+4 - Pointer to Right Child = CHILD2 (the largest node in the entire tree, T)
+
+
+
+Then the largest child X of T_L is the RIGHTMOST child node of T_L. 
+
+What does "replace" mean? To replace means to exchange the value of node X with another
+value. Some constraints to introduce about these values then are: 
+
+The value is of type integer.
+The pointers to parent and child nodes are going to be of type Node. 
+Every node is a struct. 
+
+Part A, B, and C User Interface: 
+
+You will be prompted to delete a node from the tree. The root of this tree is 50. The smallest value is 4.
+
+Part A Answer: run ./a.out  and follow prompt after compiling a.cpp: 
+
+g++ a.cpp BinarySearchTree.cpp
+
+Part B Answer: run ./a.out  and follow prompt after compiling b.cpp: 
+
+g++ b.cpp BinarySearchTree.cpp
+
+Part C: Not sure what is meant by "randomly" in this context. You may delete again as with Parts A and B. 
+
+Final Discussion: I think Part B is the most balance, since it is taking the least time out of the three if we examine what
+is happening line-by-line in the node removal functions. 
+
+
+

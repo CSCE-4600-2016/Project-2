@@ -1,0 +1,27 @@
+// copyio1.c
+// KR program 6
+// Copies input to output one character at a time
+
+/*
+	Pseudocode:
+
+	read a character
+	while(character is not end-of-file indicator)
+	   output the character just read
+	   read a character
+
+*/
+
+#include <stdio.h>
+
+// copy input to output; 1st version
+main()
+{
+	int c;
+
+	c = getchar();
+	while(c != EOF)  {
+	    putchar(c);
+	    c = getchar();
+	}
+}
